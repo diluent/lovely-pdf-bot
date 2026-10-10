@@ -1,0 +1,78 @@
+package bot
+
+import (
+	"fmt"
+	"strings"
+)
+
+type lang string
+
+const (
+	langRU lang = "ru"
+	langEN lang = "en"
+)
+
+type msgKey int
+
+const (
+	msgStart msgKey = iota
+	msgDownloadFailed
+	msgAccepted
+	msgNoImages
+	msgGenerating
+	msgGenerateFailed
+	msgSendFailed
+	msgCancelled
+	msgLangSwitched
+	msgLangUsage
+)
+
+var messages = map[lang]map[msgKey]string{
+	langRU: {
+		msgStart:          "Привет! Отправляй картинки по одной, затем /done — получишь PDF.\n/cancel — сбросить очередь.\n/lang — switch to English.",
+		msgDownloadFailed: "Не удалось скачать файл: %v",
+		msgAccepted:       "Принято (%d шт.). Продолжай или /done.",
+		msgNoImages:       "Нет картинок. Сначала пришли хотя бы одну.",
+		msgGenerating:     "Генерирую PDF из %d картинок…",
+		msgGenerateFailed: "Ошибка генерации PDF: %v",
+		msgSendFailed:     "Не удалось отправить PDF: %v",
+		msgCancelled:      "Очередь сброшена, удалено %d картинок.",
+		msgLangSwitched:   "Язык переключён на русский.",
+		msgLangUsage:      "Использование: /lang, /lang ru или /lang en.",
+	},
+	langEN: {
+		msgStart:          "Hi! Send images one by one, then /done to get a PDF.\n/cancel — clear the queue.\n/lang — переключить на русский.",
+		msgDownloadFailed: "Failed to download file: %v",
+		msgAccepted:       "Got it (%d total). Keep going or /done.",
+		msgNoImages:       "No images yet. Send at least one first.",
+		msgGenerating:     "Generating PDF from %d images…",
+		msgGenerateFailed: "PDF generation failed: %v",
+		msgSendFailed:     "Failed to send PDF: %v",
+		msgCancelled:      "Queue cleared, %d images removed.",
+		msgLangSwitched:   "Language switched to English.",
+		msgLangUsage:      "Usage: /lang, /lang ru or /lang en.",
+	},
+}
+
+func (l lang) t(key msgKey, args ...any) string {
+	return fmt.Sprintf(messages[l][key], args...)
+}
+
+// defaultLang picks the initial language from the user's Telegram client language.
+func defaultLang(code string) lang {
+	if strings.HasPrefix(code, "ru") {
+		return langRU
+	}
+	return langEN
+}
+
+// parseLang returns the language for a /lang argument, ok=false if unknown.
+func parseLang(s string) (lang, bool) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "ru", "рус", "русский", "russian":
+		return langRU, true
+	case "en", "eng", "english", "английский":
+		return langEN, true
+	}
+	return "", false
+}

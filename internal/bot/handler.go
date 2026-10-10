@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -14,6 +13,7 @@ import (
 type session struct {
 	mu     sync.Mutex
 	images [][]byte
+	lang   lang
 }
 
 type Handler struct {
@@ -30,11 +30,11 @@ func NewHandler(bot *tgbotapi.BotAPI) *Handler {
 }
 
 func (h *Handler) Handle(msg *tgbotapi.Message) {
-	sess := h.getSession(msg.From.ID)
+	sess := h.getSession(msg.From.ID, msg.From.LanguageCode)
 	chatID := msg.Chat.ID
 
 	if msg.IsCommand() {
-		h.handleCommand(msg.Command(), chatID, sess)
+		h.handleCommand(msg.Command(), msg.CommandArguments(), chatID, sess)
 		return
 	}
 
@@ -45,22 +45,42 @@ func (h *Handler) Handle(msg *tgbotapi.Message) {
 
 	data, err := h.downloadFile(fileID)
 	if err != nil {
-		h.send(chatID, "Не удалось скачать файл: "+err.Error())
+		h.send(chatID, sess.getLang().t(msgDownloadFailed, err))
 		return
 	}
 
 	sess.mu.Lock()
 	sess.images = append(sess.images, data)
 	n := len(sess.images)
+	l := sess.lang
 	sess.mu.Unlock()
 
-	h.send(chatID, fmt.Sprintf("Принято (%d шт.). Продолжай или /done.", n))
+	h.send(chatID, l.t(msgAccepted, n))
 }
 
-func (h *Handler) handleCommand(cmd string, chatID int64, sess *session) {
+func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
+	l := sess.getLang()
+
 	switch cmd {
-	case "start":
-		h.send(chatID, "Привет! Отправляй картинки по одной, затем /done — получишь PDF.\n/cancel — сбросить очередь.")
+	case "start", "help":
+		h.send(chatID, l.t(msgStart))
+
+	case "lang":
+		next := langEN
+		if l == langEN {
+			next = langRU
+		}
+		if args != "" {
+			var ok bool
+			if next, ok = parseLang(args); !ok {
+				h.send(chatID, l.t(msgLangUsage))
+				return
+			}
+		}
+		sess.mu.Lock()
+		sess.lang = next
+		sess.mu.Unlock()
+		h.send(chatID, next.t(msgLangSwitched))
 
 	case "done":
 		sess.mu.Lock()
@@ -69,15 +89,15 @@ func (h *Handler) handleCommand(cmd string, chatID int64, sess *session) {
 		sess.mu.Unlock()
 
 		if len(imgs) == 0 {
-			h.send(chatID, "Нет картинок. Сначала пришли хотя бы одну.")
+			h.send(chatID, l.t(msgNoImages))
 			return
 		}
 
-		h.send(chatID, fmt.Sprintf("Генерирую PDF из %d картинок…", len(imgs)))
+		h.send(chatID, l.t(msgGenerating, len(imgs)))
 
 		pdfBytes, err := pdf.Generate(imgs)
 		if err != nil {
-			h.send(chatID, "Ошибка генерации PDF: "+err.Error())
+			h.send(chatID, l.t(msgGenerateFailed, err))
 			return
 		}
 
@@ -86,7 +106,7 @@ func (h *Handler) handleCommand(cmd string, chatID int64, sess *session) {
 			Bytes: pdfBytes,
 		})
 		if _, err := h.bot.Send(doc); err != nil {
-			h.send(chatID, "Не удалось отправить PDF: "+err.Error())
+			h.send(chatID, l.t(msgSendFailed, err))
 		}
 
 	case "cancel":
@@ -94,19 +114,25 @@ func (h *Handler) handleCommand(cmd string, chatID int64, sess *session) {
 		n := len(sess.images)
 		sess.images = nil
 		sess.mu.Unlock()
-		h.send(chatID, fmt.Sprintf("Очередь сброшена, удалено %d картинок.", n))
+		h.send(chatID, l.t(msgCancelled, n))
 	}
 }
 
-func (h *Handler) getSession(uid int64) *session {
+func (h *Handler) getSession(uid int64, langCode string) *session {
 	h.sessionsMu.Lock()
 	defer h.sessionsMu.Unlock()
 	if s, ok := h.sessions[uid]; ok {
 		return s
 	}
-	s := &session{}
+	s := &session{lang: defaultLang(langCode)}
 	h.sessions[uid] = s
 	return s
+}
+
+func (s *session) getLang() lang {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lang
 }
 
 func (h *Handler) downloadFile(fileID string) ([]byte, error) {
