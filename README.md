@@ -1,13 +1,14 @@
 # lovely-pdf-bot
 
-Telegram bot that collects images and packs them into a PDF — one image per A4 page, scaled to fit with aspect ratio preserved.
+Telegram bot that collects images and packs them into a PDF — one image per A4 page (portrait or landscape), scaled to fit with aspect ratio preserved.
 
 ## Usage
 
 1. Send images one by one
 2. `/done` — get the PDF
 3. `/cancel` — clear the queue
-4. `/lang` — toggle between Russian and English (or `/lang ru` / `/lang en`)
+4. `/orientation` — toggle portrait/landscape pages (or `/orientation portrait` / `/orientation landscape`)
+5. `/lang` — toggle between Russian and English (or `/lang ru` / `/lang en`)
 
 The initial language follows the user's Telegram client language (Russian for `ru`, English otherwise).
 

@@ -14,6 +14,7 @@ type session struct {
 	mu     sync.Mutex
 	images [][]byte
 	lang   lang
+	orient pdf.Orientation
 }
 
 type Handler struct {
@@ -90,6 +91,7 @@ func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
 		sess.mu.Lock()
 		imgs := sess.images
 		sess.images = nil
+		orient := sess.orient
 		sess.mu.Unlock()
 
 		if len(imgs) == 0 {
@@ -99,7 +101,7 @@ func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
 
 		h.send(chatID, l.t(msgGenerating, len(imgs)))
 
-		pdfBytes, err := pdf.Generate(imgs)
+		pdfBytes, err := pdf.Generate(imgs, orient)
 		if err != nil {
 			h.send(chatID, l.t(msgGenerateFailed, err))
 			return
@@ -112,6 +114,24 @@ func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
 		if _, err := h.bot.Send(doc); err != nil {
 			h.send(chatID, l.t(msgSendFailed, err))
 		}
+
+	case "orientation":
+		sess.mu.Lock()
+		next := pdf.Landscape
+		if sess.orient == pdf.Landscape {
+			next = pdf.Portrait
+		}
+		if args != "" {
+			var ok bool
+			if next, ok = parseOrientation(args); !ok {
+				sess.mu.Unlock()
+				h.send(chatID, l.t(msgOrientUsage))
+				return
+			}
+		}
+		sess.orient = next
+		sess.mu.Unlock()
+		h.send(chatID, l.t(orientationMsg(next)))
 
 	case "cancel":
 		sess.mu.Lock()

@@ -12,14 +12,26 @@ import (
 )
 
 const (
-	pageW = 210.0 // A4 mm
-	pageH = 297.0
+	a4Short = 210.0 // A4 mm
+	a4Long  = 297.0
+)
+
+type Orientation int
+
+const (
+	Portrait Orientation = iota
+	Landscape
 )
 
 // Generate creates an A4 PDF with one image per page, scaled to fit while
 // preserving aspect ratio and centered on the page.
-func Generate(images [][]byte) ([]byte, error) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
+func Generate(images [][]byte, orient Orientation) ([]byte, error) {
+	orientStr, pageW, pageH := "P", a4Short, a4Long
+	if orient == Landscape {
+		orientStr, pageW, pageH = "L", a4Long, a4Short
+	}
+
+	pdf := gofpdf.New(orientStr, "mm", "A4", "")
 	pdf.SetMargins(0, 0, 0)
 	pdf.SetAutoPageBreak(false, 0)
 
