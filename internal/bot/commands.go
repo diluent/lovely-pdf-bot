@@ -25,3 +25,14 @@ func RegisterCommands(api *tgbotapi.BotAPI) error {
 	}
 	return nil
 }
+
+// menuKeyboard builds the reply keyboard shown under the input field.
+func menuKeyboard(l lang) tgbotapi.ReplyKeyboardMarkup {
+	var row []tgbotapi.KeyboardButton
+	for _, b := range menuButtons[l] {
+		row = append(row, tgbotapi.NewKeyboardButton(b.label))
+	}
+	kb := tgbotapi.NewReplyKeyboard(row)
+	kb.ResizeKeyboard = true
+	return kb
+}

@@ -37,6 +37,10 @@ func (h *Handler) Handle(msg *tgbotapi.Message) {
 		h.handleCommand(msg.Command(), msg.CommandArguments(), chatID, sess)
 		return
 	}
+	if cmd := buttonCommand(msg.Text); cmd != "" {
+		h.handleCommand(cmd, "", chatID, sess)
+		return
+	}
 
 	fileID := extractImageFileID(msg)
 	if fileID == "" {
@@ -63,7 +67,7 @@ func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
 
 	switch cmd {
 	case "start", "help":
-		h.send(chatID, l.t(msgStart))
+		h.sendWithMenu(chatID, l.t(msgStart), l)
 
 	case "lang":
 		next := langEN
@@ -80,7 +84,7 @@ func (h *Handler) handleCommand(cmd, args string, chatID int64, sess *session) {
 		sess.mu.Lock()
 		sess.lang = next
 		sess.mu.Unlock()
-		h.send(chatID, next.t(msgLangSwitched))
+		h.sendWithMenu(chatID, next.t(msgLangSwitched), next)
 
 	case "done":
 		sess.mu.Lock()
@@ -150,6 +154,13 @@ func (h *Handler) downloadFile(fileID string) ([]byte, error) {
 
 func (h *Handler) send(chatID int64, text string) {
 	_, _ = h.bot.Send(tgbotapi.NewMessage(chatID, text))
+}
+
+// sendWithMenu sends text and (re)attaches the menu keyboard in the given language.
+func (h *Handler) sendWithMenu(chatID int64, text string, l lang) {
+	m := tgbotapi.NewMessage(chatID, text)
+	m.ReplyMarkup = menuKeyboard(l)
+	_, _ = h.bot.Send(m)
 }
 
 // extractImageFileID returns the file ID for a photo or image document,

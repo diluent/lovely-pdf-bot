@@ -92,3 +92,31 @@ var commandDescriptions = map[lang][]struct{ cmd, desc string }{
 		{"lang", "Переключить на русский"},
 	},
 }
+
+// menuButtons are the reply keyboard labels, mapped to the command each one runs.
+var menuButtons = map[lang][]struct{ label, cmd string }{
+	langRU: {
+		{"📄 Готово", "done"},
+		{"🗑 Сбросить", "cancel"},
+		{"🌐 English", "lang"},
+	},
+	langEN: {
+		{"📄 Done", "done"},
+		{"🗑 Clear", "cancel"},
+		{"🌐 Русский", "lang"},
+	},
+}
+
+// buttonCommand returns the command for a menu button label, empty if the text
+// is not a button. All languages are checked, since the user may still have an
+// old keyboard on screen.
+func buttonCommand(text string) string {
+	for _, btns := range menuButtons {
+		for _, b := range btns {
+			if b.label == text {
+				return b.cmd
+			}
+		}
+	}
+	return ""
+}
