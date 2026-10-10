@@ -76,3 +76,19 @@ func parseLang(s string) (lang, bool) {
 	}
 	return "", false
 }
+
+// commandDescriptions are shown in the Telegram command menu.
+var commandDescriptions = map[lang][]struct{ cmd, desc string }{
+	langRU: {
+		{"start", "Как пользоваться ботом"},
+		{"done", "Собрать PDF из присланных картинок"},
+		{"cancel", "Сбросить очередь картинок"},
+		{"lang", "Switch to English"},
+	},
+	langEN: {
+		{"start", "How to use the bot"},
+		{"done", "Build a PDF from the sent images"},
+		{"cancel", "Clear the image queue"},
+		{"lang", "Переключить на русский"},
+	},
+}

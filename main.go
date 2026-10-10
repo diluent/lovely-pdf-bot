@@ -26,6 +26,10 @@ func main() {
 	}
 	log.Printf("Bot @%s started", api.Self.UserName)
 
+	if err := bot.RegisterCommands(api); err != nil {
+		log.Printf("warn: set commands: %v", err)
+	}
+
 	handler := bot.NewHandler(api)
 
 	u := tgbotapi.NewUpdate(0)
